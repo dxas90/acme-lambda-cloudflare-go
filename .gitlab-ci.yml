@@ -27,7 +27,7 @@ initialize:
   image: golang:${GO_VERSION}
   script:
     - echo "Initializing pipeline for commit ${CI_COMMIT_SHA}"
-    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - echo "Branch -> ${CI_COMMIT_REF_NAME}"
     - echo "Downloading Go dependencies..."
     - go mod download
     - go mod verify
@@ -116,7 +116,7 @@ deploy:staging:
     - apk add --no-cache curl jq
   script:
     - echo "Deploying to staging environment..."
-    - echo "Image to deploy: ${STAGING_IMAGE_TAG}"
+    - echo "Image to deploy -> ${STAGING_IMAGE_TAG}"
     - echo "Simulating deployment to AWS Lambda staging..."
     # In real scenario, you would use AWS CLI or Terraform here
     # Example: aws lambda update-function-code --function-name acme-lambda-staging --image-uri ${STAGING_IMAGE_TAG}
@@ -146,7 +146,7 @@ promote:production:
     - echo "Pushing production image to registry..."
     - docker push ${PRODUCTION_IMAGE_TAG}
     - docker push ${CI_REGISTRY_IMAGE}:latest
-    - echo "Production image promoted: ${PRODUCTION_IMAGE_TAG}"
+    - echo "Production image promoted -> ${PRODUCTION_IMAGE_TAG}"
   environment:
     name: production
     url: https://production.example.com
@@ -164,9 +164,9 @@ notify:success:
     - apk add --no-cache curl
   script:
     - echo "Pipeline completed successfully!"
-    - echo "Commit: ${CI_COMMIT_SHA}"
-    - echo "Branch/Tag: ${CI_COMMIT_REF_NAME}"
-    - echo "Author: ${GITLAB_USER_EMAIL}"
+    - echo "Commit -> ${CI_COMMIT_SHA}"
+    - echo "Branch/Tag -> ${CI_COMMIT_REF_NAME}"
+    - echo "Author -> ${GITLAB_USER_EMAIL}"
     # Add your notification logic here (Slack, Email, etc.)
     # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Build succeeded!"}' $SLACK_WEBHOOK_URL
   rules:
@@ -180,9 +180,9 @@ notify:failure:
     - apk add --no-cache curl
   script:
     - echo "Pipeline failed!"
-    - echo "Commit: ${CI_COMMIT_SHA}"
-    - echo "Branch/Tag: ${CI_COMMIT_REF_NAME}"
-    - echo "Author: ${GITLAB_USER_EMAIL}"
+    - echo "Commit -> ${CI_COMMIT_SHA}"
+    - echo "Branch/Tag -> ${CI_COMMIT_REF_NAME}"
+    - echo "Author -> ${GITLAB_USER_EMAIL}"
     # Add your notification logic here (Slack, Email, etc.)
     # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Build failed!"}' $SLACK_WEBHOOK_URL
   rules:
