@@ -17,6 +17,11 @@ bootstrap
 data-dir-*/
 .direnv
 
+# CI/CD artifacts
+lambda.zip
+build.env
+Dockerfile
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
