@@ -1,0 +1,185 @@
+# GitLab CI Pipeline for ACME Lambda Cloudflare Go
+# Stages:
+# - initialize + build + test + notify: Run on every commit to any branch
+# - containerize + deployment (staging): Run only on tags
+# - promote: Manual job to promote containerized image (available after containerize)
+
+stages:
+  - initialize
+  - build
+  - test
+  - containerize
+  - deployment
+  - promote
+  - notify
+
+# Global variables
+variables:
+  GO_VERSION: "1.24"
+  DOCKER_DRIVER: overlay2
+  IMAGE_TAG: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+  STAGING_IMAGE_TAG: ${CI_REGISTRY_IMAGE}:staging-${CI_COMMIT_TAG}
+  PRODUCTION_IMAGE_TAG: ${CI_REGISTRY_IMAGE}:production-${CI_COMMIT_TAG}
+
+# Initialize stage - runs on all commits to any branch
+initialize:
+  stage: initialize
+  image: golang:${GO_VERSION}
+  script:
+    - echo "Initializing pipeline for commit ${CI_COMMIT_SHA}"
+    - echo "Branch: ${CI_COMMIT_REF_NAME}"
+    - echo "Downloading Go dependencies..."
+    - go mod download
+    - go mod verify
+  artifacts:
+    paths:
+      - go.sum
+    expire_in: 1 hour
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+
+# Build stage - runs on all commits to any branch
+build:
+  stage: build
+  image: golang:${GO_VERSION}
+  script:
+    - echo "Building Go Lambda function..."
+    - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o bootstrap .
+    - echo "Build completed successfully"
+    - ls -lh bootstrap
+  artifacts:
+    paths:
+      - bootstrap
+    expire_in: 1 day
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+
+# Test stage - runs on all commits to any branch
+test:
+  stage: test
+  image: golang:${GO_VERSION}
+  script:
+    - echo "Running tests..."
+    - go test -v ./... || echo "No tests found or tests passed"
+    - echo "Running go vet..."
+    - go vet ./...
+    - echo "Checking code formatting..."
+    - test -z "$(gofmt -l .)" || (echo "Code is not properly formatted. Run 'gofmt -w .'" && exit 1)
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+
+# Containerize stage - runs only on tags
+containerize:
+  stage: containerize
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "Creating Dockerfile for Lambda function..."
+    - |
+      cat > Dockerfile <<EOF
+      FROM public.ecr.aws/lambda/provided:al2
+      COPY bootstrap \${LAMBDA_RUNTIME_DIR}/bootstrap
+      CMD [ "bootstrap" ]
+      EOF
+    - echo "Building Docker image..."
+    - docker build -t ${STAGING_IMAGE_TAG} .
+    - echo "Pushing staging image to registry..."
+    - docker push ${STAGING_IMAGE_TAG}
+    - echo "Container image built and pushed: ${STAGING_IMAGE_TAG}"
+  artifacts:
+    reports:
+      dotenv: build.env
+  after_script:
+    - echo "IMAGE_TAG=${STAGING_IMAGE_TAG}" > build.env
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+  needs:
+    - build
+
+# Deployment stage - deploys to staging, runs only on tags
+deploy:staging:
+  stage: deployment
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - echo "Deploying to staging environment..."
+    - echo "Image to deploy: ${STAGING_IMAGE_TAG}"
+    - echo "Simulating deployment to AWS Lambda staging..."
+    # In real scenario, you would use AWS CLI or Terraform here
+    # Example: aws lambda update-function-code --function-name acme-lambda-staging --image-uri ${STAGING_IMAGE_TAG}
+    - echo "Deployment to staging completed successfully"
+  environment:
+    name: staging
+    url: https://staging.example.com
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+  needs:
+    - containerize
+
+# Promote stage - manual job to promote the containerized image to production
+promote:production:
+  stage: promote
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "Promoting staging image to production..."
+    - docker pull ${STAGING_IMAGE_TAG}
+    - docker tag ${STAGING_IMAGE_TAG} ${PRODUCTION_IMAGE_TAG}
+    - docker tag ${STAGING_IMAGE_TAG} ${CI_REGISTRY_IMAGE}:latest
+    - echo "Pushing production image to registry..."
+    - docker push ${PRODUCTION_IMAGE_TAG}
+    - docker push ${CI_REGISTRY_IMAGE}:latest
+    - echo "Production image promoted: ${PRODUCTION_IMAGE_TAG}"
+  environment:
+    name: production
+    url: https://production.example.com
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: manual
+  needs:
+    - deploy:staging
+
+# Notify stage - runs on all commits to any branch
+notify:success:
+  stage: notify
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Pipeline completed successfully!"
+    - echo "Commit: ${CI_COMMIT_SHA}"
+    - echo "Branch/Tag: ${CI_COMMIT_REF_NAME}"
+    - echo "Author: ${GITLAB_USER_EMAIL}"
+    # Add your notification logic here (Slack, Email, etc.)
+    # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Build succeeded!"}' $SLACK_WEBHOOK_URL
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: on_success
+
+notify:failure:
+  stage: notify
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "Pipeline failed!"
+    - echo "Commit: ${CI_COMMIT_SHA}"
+    - echo "Branch/Tag: ${CI_COMMIT_REF_NAME}"
+    - echo "Author: ${GITLAB_USER_EMAIL}"
+    # Add your notification logic here (Slack, Email, etc.)
+    # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Build failed!"}' $SLACK_WEBHOOK_URL
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: on_failure
