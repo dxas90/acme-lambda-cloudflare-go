@@ -62,7 +62,13 @@ test:
   image: golang:${GO_VERSION}
   script:
     - echo "Running tests..."
-    - go list ./... > /dev/null 2>&1 && go test -v ./... || echo "No test files found, skipping tests"
+    - |
+      if go list -f '{{.TestGoFiles}}' ./... 2>/dev/null | grep -q '.go'; then
+        echo "Test files found, running tests..."
+        go test -v ./...
+      else
+        echo "No test files found, skipping tests"
+      fi
     - echo "Running go vet..."
     - go vet ./...
     - echo "Checking code formatting..."
