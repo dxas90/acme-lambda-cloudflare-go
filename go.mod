@@ -3,7 +3,7 @@ module github.com/dxas90/cloudflare-dns-s3
 go 1.24.3
 
 require (
-	github.com/aws/aws-lambda-go v1.50.0
+	github.com/aws/aws-lambda-go v1.51.1
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/go-acme/lego/v4 v4.29.0
 )
