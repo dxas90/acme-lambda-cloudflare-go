@@ -23,6 +23,8 @@ github.com/go-acme/lego/v4 v4.29.0 h1:vKMEtvoKb0gOO9rWO9zMBwE4CgI5A5CWDsK4QEeBqz
 github.com/go-acme/lego/v4 v4.29.0/go.mod h1:rnYyDj1NdDd9y1dHkVuUS97j7bfe9I61+oY9odKaHM8=
 github.com/go-acme/lego/v4 v4.30.1 h1:tmb6U0lvy8Mc3lQbqKwTat7oAhE8FUYNJ3D0gSg6pJU=
 github.com/go-acme/lego/v4 v4.30.1/go.mod h1:V7m/Ip+EeFkjOe028+zeH+SwWtESxw1LHelwMIfAjm4=
+github.com/go-acme/lego/v4 v4.31.0 h1:gd4oUYdfs83PR1/SflkNdit9xY1iul2I4EystnU8NXM=
+github.com/go-acme/lego/v4 v4.31.0/go.mod h1:m6zcfX/zcbMYDa8s6AnCMnoORWNP8Epnei+6NBCTUGs=
 github.com/go-jose/go-jose/v4 v4.1.1 h1:JYhSgy4mXXzAdF3nUx3ygx347LRXJRrpgyU3adRmkAI=
 github.com/go-jose/go-jose/v4 v4.1.1/go.mod h1:BdsZGqgdO3b6tTc6LSE56wcDbMMLuPsw5d4ZD5f94kA=
 github.com/go-jose/go-jose/v4 v4.1.2 h1:TK/7NqRQZfgAh+Td8AlsrvtPoUyiHh0LqVvokh+1vHI=
