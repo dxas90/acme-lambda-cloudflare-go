@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	github.com/aws/aws-lambda-go v1.51.1
 	github.com/aws/aws-sdk-go v1.55.8
-	github.com/go-acme/lego/v4 v4.30.1
+	github.com/go-acme/lego/v4 v4.31.0
 )
 
 require (
